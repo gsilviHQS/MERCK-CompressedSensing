@@ -25,7 +25,7 @@ def poisson(lmbd: float) -> int:  # labmda is the average number of events per u
     return k - 1
 
 
-def PoissonNumbers(seed_value: int, number_of_samples: int, total_number_of_indices: int):
+def PoissonNumbers(seed_value: int, number_of_samples: int, total_number_of_indices: int, usenumpy=False):
     """
     Generate random Poisson-distributed numbers
     total_number_of_indices: the total number of indices e.g. 256
@@ -36,7 +36,7 @@ def PoissonNumbers(seed_value: int, number_of_samples: int, total_number_of_indi
     """
     v = [0] * total_number_of_indices  # Initialize the vector
     ld = total_number_of_indices / number_of_samples  # Number of indices per sample,establish 1/fraction
-    adj = 2 * (ld - 1)  # initial guess of adjustment
+    adj = 2 * (ld - 1)  # initial guess of adjustment, useful to get the right number of samples
     random.seed(seed_value)  # Set the seed
     n = 0
     while n != number_of_samples:  # if not at first, try, try again until you get the right number of samples
@@ -47,7 +47,11 @@ def PoissonNumbers(seed_value: int, number_of_samples: int, total_number_of_indi
             i += 1  # Increment the index
             # The lambda (average number of events) for the current index
             lambd = adj * math.sin((i + 0.5) / (total_number_of_indices + 1) * np.pi / 2)
-            k = poisson(lambd)  # this produce the gap size for the next index
+            
+            if usenumpy:
+                k = np.random.poisson(lambd)
+            else:
+                k = poisson(lambd)  # this produce the gap size for the next index
             i += k  # Increment the index by the gap size
             n += 1  # Increment the number of samples
         if n > number_of_samples:  # If the number of samples is greater than the number of samples asked
@@ -57,3 +61,5 @@ def PoissonNumbers(seed_value: int, number_of_samples: int, total_number_of_indi
 
     for j in range(number_of_samples):
         print(v[j], end='\t')
+    print()
+    return v[0:number_of_samples]
