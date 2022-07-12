@@ -5,6 +5,50 @@ The Art of Computer Programming, Volume 2. Addison Wesley  """
 import math
 import random
 import numpy as np
+import matplotlib.pyplot as plt
+import scipy.fftpack as spfft
+
+
+class ISTrecontruction(object):  # object is a class, which is a blueprint for an object,it has attributes and methods
+    """
+    class for the IST recontruction procedure
+    """
+    def __init__(self, decrease_factor=0.7, max_iter=100, tol=1e-3):
+        self.decrease_factor = decrease_factor
+        self.max_iter = max_iter
+        self.tol = tol
+
+    def run(self, signal, non_sampled_points, verbose=False):
+        self.signal = signal
+        self.length = len(signal)
+        final_spectrum = np.zeros(self.length)  # create a new array with size of the signal
+        spectrum = spfft.dct(self.signal, norm='ortho', axis=0)  # perform DCT on the signal
+        steps = 0
+        while True:
+            steps += 1
+            max_value = np.max(np.abs(spectrum))  # find the max value of the spectrum
+            threshold = self.decrease_factor * max_value  # define the threshold
+            if verbose:
+                print('threshold:', threshold, end='\t')
+            for i, data_point in enumerate(spectrum):  # loop through the spectrum
+                # sign of data_point
+                sign = np.sign(data_point)  # sign of data_point
+                if abs(data_point) > threshold:  # if the absolute value of data_point is greater than threshold
+                    final_spectrum[i] += sign * (abs(data_point) - threshold)  # add the "excess" to the final spectrum
+                    spectrum[i] = sign * threshold  # set the value of spectrum to the sign of data_point times threshold
+                # convert the spectrum to a time-domain signal using the idct
+                signal = spfft.idct(spectrum, norm='ortho', axis=0)
+                signal[non_sampled_points] = 0  # set the non_sampled_points to 0
+                spectrum = spfft.dct(signal, norm='ortho', axis=0)
+            if threshold < self.tol:
+                print('Reason to stop: Threshold<' + str(self.tol))
+                break
+
+            if steps > self.max_iter:
+                print('Reason to stop: Iterations>' + str(self.max_iter))
+                break
+        return final_spectrum
+
 
 
 def poisson(lmbd: float) -> int:  # labmda is the average number of events per unit time
@@ -25,7 +69,7 @@ def poisson(lmbd: float) -> int:  # labmda is the average number of events per u
     return k - 1
 
 
-def PoissonNumbers(seed_value: int, number_of_samples: int, total_number_of_indices: int, usenumpy=False):
+def PoissonNumbers(number_of_samples: int, total_number_of_indices: int, seed_value: int = 42, usenumpy=False):
     """
     Generate random Poisson-distributed numbers
     total_number_of_indices: the total number of indices e.g. 256
@@ -59,7 +103,40 @@ def PoissonNumbers(seed_value: int, number_of_samples: int, total_number_of_indi
         if n < number_of_samples:  # If the number of samples is less than the number of samples asked
             adj /= 1.02  # too few points created, so adjust the adjustment
 
-    for j in range(number_of_samples):
-        print(v[j], end='\t')
-    print()
+    # for j in range(number_of_samples):
+    #     print(v[j], end='\t')
+    # print()
     return v[0:number_of_samples]
+
+
+class MyPlot:
+    
+    def find_between(self,set1,start,end):
+        return [i for i in set1 if start <= i < end]
+
+    def split_list(self,l, n, max_value):
+        divisor = max_value // n
+        return [self.find_between(l,divisor*i, divisor*(i+1)) for i in range(n)]
+    def subtract_list(self,l, n):
+        return [x-n for x in l]
+
+    def plot_list(self,set1, max_value, rows=5):
+        splitset = self.split_list(set1, rows, max_value)
+        divisor = max_value // rows
+        #plt.gca().axes.get_yaxis().set_visible(False)
+        plt.axis('off')
+        #plt.ylim(-1,rows+1)
+        for i,subset in enumerate(splitset):
+            y = len(splitset)-i
+            plt.plot(np.arange(0,divisor), [y]*(divisor), 'o',color='white', markeredgewidth=0.2, markeredgecolor='black', markersize=rows-2)
+            plt.plot(self.subtract_list(subset,divisor*i),[y]*len(subset) , 'o',color='black', markersize=rows-2)
+            #make a list of number between divisor*i and divisor*(i+1)
+            
+            #move the text further to the left: 
+            plt.text(0,y,str(i*divisor)+"  ",fontsize=rows-1 , ha='right',va='center', color='black',fontweight='bold')
+            plt.text(divisor,y,str(divisor*(i+1)),fontsize=rows-1,va='center',color='black',fontweight='bold')
+
+            for j,entry in enumerate(subset):
+                # have a bolder font for text, use the following:
+
+                plt.text(entry-divisor*i,y,str(entry),color='white',ha='center', va='center', fontsize=-1+rows-len(str(entry)))
