@@ -10,13 +10,20 @@ import scipy.fftpack as spfft
 import cvxpy as cvx
 
 
-def CS_Reconstruction(idct_matrix, subsignal, subset):
-    # do L1 optimization
-    Asub = idct_matrix[subset] # extract small sample of idct matrix, set1 is the indices of the subsample
-    vx = cvx.Variable(idct_matrix.shape[0]) # variable for the coefficients
-
+# SIGNAL RECONSTRUCTION
+def CS_Reconstruction(subsignal, subset, total_number_of_indices):
+    """
+    Compressed Sensing Reconstruction
+    total_number_of_indices: the total number of indices e.g. 256
+    subsignal: the subsignal to be reconstructed
+    subset: the subset of indices of the subsignal to be reconstructed
+    """
+    
+    M = spfft.idct(np.identity(total_number_of_indices), norm='ortho', axis=0) 
+    Msub = M[subset] # extract small sample of idct matrix, set1 is the indices of the subsample
+    vx = cvx.Variable(total_number_of_indices) # variable for the coefficients
     objective = cvx.Minimize(cvx.norm(vx, 1)) # L1 norm to minimize, we use L1 because we want a sparser solution for vx (fourier coefficients)
-    constraints = [Asub*vx == subsignal] # equality constraint Ax = y , y2 is the small sample of the signal
+    constraints = [Msub*vx == subsignal] # equality constraint Ax = y , y2 is the small sample of the signal
     prob = cvx.Problem(objective, constraints) # create problem
     result = prob.solve(verbose=True) # solve problem
     return vx, result
@@ -72,6 +79,8 @@ class ISTrecontruction(object):
                 break
         return final_spectrum
 
+
+# NUS, Poisson distributed set of indices
 
 def poisson(lmbd: float) -> int:  # labmda is the average number of events per unit time
     """Generate a Poisson-distributed random number.
@@ -135,6 +144,8 @@ def GenPoissonDist(number_of_samples: int, total_number_of_indices: int,  usenum
     return v[0:number_of_samples]
 
 
+
+#PLOT FUNCTIONS
 class MyPlot:
 
     def find_between(self, set1, start, end):
